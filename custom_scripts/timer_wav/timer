@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+import time
+import argparse
+import simpleaudio as sa
+import os
+
+def countdown(args):
+    t = args.hr * 3600 + args.min * 60 + args.sec
+    while t:
+        mins, secs = divmod(t, 60)
+        timeformat = '{:02d}:{:02d}'.format(mins, secs)
+        print(timeformat, end='\r')
+        time.sleep(1)
+        t -= 1
+    print('Timer finished.\n')
+    play_audio(args.loop)
+
+def play_audio(n):
+    filename = os.getcwd() + '/timer_wav/smb_stage_clear.wav'
+    for i in range(n):
+        wave_obj = sa.WaveObject.from_wave_file(filename)
+        play_obj = wave_obj.play()
+        play_obj.wait_done()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Countdown Timer")
+    parser.add_argument("--hr", type=int, default=0)
+    parser.add_argument("--min", type=int, default=0)
+    parser.add_argument("--sec", type=int, default=0)
+    parser.add_argument("--loop", type=int, default=3)
+    parser.set_defaults(func=countdown)
+    args = parser.parse_args()
+    args.func(args)
+    exit()
+
+
+
+

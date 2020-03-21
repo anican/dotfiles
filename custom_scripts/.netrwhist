@@ -1,0 +1,12 @@
+let g:netrw_dirhistmax  =10
+let g:netrw_dirhistcnt =7
+let g:netrw_dirhist_7='/Users/anican/Documents/projects/research/sgd_noise/models'
+let g:netrw_dirhist_6='/Users/anican/projects/research/tuna/data/bob.test'
+let g:netrw_dirhist_5='/Users/anican/projects/research/tuna/data/log.pkl'
+let g:netrw_dirhist_4='/Users/anican/Documents/courses/note-template'
+let g:netrw_dirhist_3='/Users/anican/Documents/spec'
+let g:netrw_dirhist_2='/Users/anican/.config/fish/conf.d'
+let g:netrw_dirhist_1='/Users/anican/.config/custom_scripts'
+let g:netrw_dirhist_0='/Users/anican/.config/custom_scripts/timer_wav'
+let g:netrw_dirhist_9='/Users/anican/.conda'
+let g:netrw_dirhist_8='/Users/anican/Documents/courses/cse-447/HW2/src'
