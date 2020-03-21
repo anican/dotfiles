@@ -1,0 +1,18 @@
+# copy selection to system clipboard
+set selection-clipboard clipboard
+
+# colors
+set default-bg "#2E3340" # "#4C566A"
+set default-fg "#2E3340" # "#4C566A"
+set recolor-darkcolor "#FFFFFF"
+set recolor-lightcolor "#2E3340"
+
+# zoom and scroll step-size
+set zoom-step 20
+set scroll-step 80
+map <C-i> zoom in
+map <C-o> zoom out
+
+# enable incremental search
+set incremental-search true
+
