@@ -1,0 +1,671 @@
+\documentclass[programming]{../../mfcs}
+\course{CSE 143}{Computer Programming II}{Winter 2019}
+\mfcsdate{Thursday, March 14, 2019 11:30pm}
+\topic{HW8: Huffman Coding}
+\hasmarginnotes
+\usepackage{csquotes}
+\usepackage{tabularx}
+\newcommand{\dangerbendy}[1]{\marginnote{\vspace{-8.5em}\begin{center}\dbend\end{center}\scriptsize #1}}
+
+\begin{document}
+
+\vspace{-2.5em}
+{\bf\color{colour} This assignment focuses on binary trees, priority queues, and recursion. This assignment is worth 30 points.
+Turn in the following files using the link on the course website:}
+
+\begin{itemize}\setlength{\itemindent}{-1.5em}
+  \item \texttt{HuffmanCode.java} -- A class that represents a ``huffman code'' which
+      is used to compress data. This file must contain a private static class named \texttt{HuffmanNode}.
+  \item \texttt{secretmessage.short} -- A compressed hidden message that you will write
+  \item \texttt{secretmessage.code} -- The corresponding huffman code for your hidden message
+\end{itemize}
+
+You will need the support file \texttt{HuffmanCompressor.java},
+\texttt{BitInputStream.java}, and \texttt{BitOutputStream.java}; place these in the same
+folder as your program or project.
+The code you submit must work properly with the unmodified versions of the provided files.
+
+
+\vspace{1em}
+
+\begin{question}{ASCII and Binary Representation}
+    We discovered on an earlier assignment that every \texttt{char} has an equivalent
+    \texttt{int} value between 0 and 255.  (Recall,
+    \verb+(int)'a' = 97+, \verb+(int)'z' = 122+, etc.)  In this assignment, we go a step
+    further: computers actually see integers as \emph{binary} (1's and 0's).  Binary is a
+    lot like the normal numbers we use, except it's based around 2 instead of 10.  For
+    example, ``\texttt{1204}'' is written that way, because
+
+    \vspace{-1em}
+
+    $$1204 = \fbox{1} \cdot 10^3 + \fbox{2} \cdot 10^2 + \fbox{0} \cdot 10^1 + \fbox{5} \cdot 10^0$$
+
+    \vspace*{-1em}
+
+    Similarly, because
+
+    \vspace*{-1em}
+
+    $$97 = \fbox{0} \cdot 2^7 + \fbox{1} \cdot 2^6 + \fbox{1} \cdot 2^5 + \fbox{0} \cdot 2^4 + \fbox{0} \cdot 2^3 + \fbox{0} \cdot 2^2 +
+    \fbox{0} \cdot 2^1 + \fbox{1} \cdot 2^0$$
+
+    \vspace*{-0.2em}
+
+    97 is ``\texttt{01100001}'' in binary!  In fact, all \emph{char}'s can be written using
+    exactly 8 binary digits (bits).  This encoding, which is used pretty universally by
+    computers, is called ASCII.
+\end{question}
+
+\vspace{-1em}
+
+\begin{question}{Huffman Coding}
+    \emph{Huffman coding} is an algorithm devised by David A. Huffman of MIT in 1952 for
+    \emph{compressing} data to make a file occupy a smaller amount of space.  Unbelievably,
+    this algorithm is still used today in a variety of very important areas.  For example,
+    mp3s and jpgs both use Huffman Coding. The general idea behind Huffman Coding is the
+    following:
+    \begin{center}
+        \textbf{What if we used fewer than 8 bits for characters that are more common?}
+    \end{center}\vspace*{-0.7em}
+
+    Consider the following (simple) example.  Imagine we have the following
+    data:\vspace{-0.8em}
+
+    {\begin{center}
+    \fbox{\begin{minipage}{0.96\textwidth}
+        \texttt{\underline{bbbb}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}\\
+        \texttt{\underline{ccc}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}\\
+        \texttt{\underline{dd}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+    \end{minipage}}
+    \end{center}}\vspace{-0.8em}
+
+    \begin{minipage}{0.46\textwidth}
+        \examheader{How many bits to store with ASCII Coding?}
+        First, we find the ASCII code for each letter:\vspace*{-1.0em}
+        \begin{center}
+            \begin{tabular}{ccccccc}
+                \texttt{a} & \to & \texttt{01100001}, &\hspace*{1.6em}& \texttt{b} & \to & \texttt{01100010},\\
+                \texttt{c} & \to & \texttt{01100011}, &\hspace*{1.6em}& \texttt{d} & \to & \texttt{01100100}\\
+            \end{tabular}
+        \end{center}
+        Since each line has 80 letters, and each letter code is 8 bits, the number of bits required is:
+        \begin{center}\fbox{\textbf{$80 \cdot 8 \cdot 4 = 2560$}}\end{center}
+        \vspace{0.7em}
+    \end{minipage}\hfill
+    \begin{minipage}{0.46\textwidth}
+        \examheader{How many bits to store with Huffman Coding?}
+        Since \verb+a+ is most frequent, we use a short code for it, then we use the next longest code for \verb+b+, etc:\vspace{-0.5em}
+        \begin{center}
+            \begin{tabular}{ccccccc}
+                \texttt{a} & \to & \texttt{1}, &\hspace*{1.6em}& \texttt{b} & \to & \texttt{00},\\
+                \texttt{c} & \to & \texttt{011}, &\hspace*{1.6em}& \texttt{d} & \to & \texttt{010}\\
+            \end{tabular}
+        \end{center}\vspace*{-0.5em}
+        This data has 229 \verb+a+'s, 4 \verb+b+'s, 3 \verb+c+'s, and 2 \verb+d+'s.  Since we need one bit for \verb+a+,
+        two for \verb+b+, and three for \verb+c+ and \verb+d+, the total count of bits is:
+        \begin{center}\fbox{\textbf{$229 \cdot 1 + 4 \cdot 2 + 3 \cdot 3 + 2 \cdot 3 = 255$}}\end{center}
+        \end{minipage}
+
+        \vspace{1em}
+
+        \centering Woah! By changing the coding, we compressed the data by a factor of 10!!
+
+\vspace{0.5em}
+
+\justifying\noindent
+In this assignment, you will create classes \texttt{HuffmanCode} and \texttt{HuffmanNode}
+to be used in compression of data You are provided with a client
+\texttt{HuffmanCompressor.java} that handles user interaction and calls your huffman code
+methods to compress and decompress a given file.
+\end{question}
+
+\newcommand{\qquote}[1]{\textquoteleft\texttt{#1}\textquoteright}
+
+\begin{question}{Making a Huffman Code}
+    In the previous example, we magically arrived at the special binary sequences to be used
+    as codes.  In this section, we explain the algorithm to create these special binary
+    sequences.
+
+    Throughout this section, we will use the following example:\vspace*{1.0em}
+
+\renewcommand{\FancyVerbFormatLine}[1]{#1}
+\begin{Verbatim}[fontsize=\small,frame=single,label=simple-spec-example.txt]
+aba ab cabbb
+\end{Verbatim}
+
+
+    \subquestion*{Step 1: Count the Frequencies of the Characters}
+    The file \texttt{simple-spec-example.txt} has the characters \verb+'a'+, \verb+'b'+, \verb+'c'+, and \verb+' '+.  Counting up the frequencies,
+    we get the following:
+    \begin{center}
+    \begin{tabular}{|c|c|}\hline
+    \textbf{Character} & \textbf{Count}\\\hline
+    \qquote{ }       & 2\\\hline
+    \qquote{a}       & 4\\\hline
+    \qquote{b}       & 5\\\hline
+    \qquote{c}       & 1\\\hline
+    \end{tabular}
+    \end{center}
+
+    \subquestion*{Step 2: Create a ``Priority Queue'' Ordered By Frequency}
+    Since our ultimate goal is to create a code based on frequencies, we need to use a data
+    structure that helps us keep track of the order of the letters based on frequencies.  We
+    will use a \emph{priority queue} for this.  A \emph{priority queue} is a queue that is
+    ordered by \emph{priorities} (in this case frequencies) instead of FIFO order.  In other
+    words, we can ask the priority queue to insert a new element (\texttt{add(element)}) and
+    we can ask it for the highest priority (\texttt{remove()}).
+    \dangerbendy{In Java, if you print out a priority queue, it \emph{will not}
+        appear in the order you expect it to.  This is EXPECTED behavior.}
+
+    \vspace{0.5em}
+
+    For huffman coding, we want to remove the node with \emph{lowest} frequency first.
+    (Intuitively, the reason is that the things we remove first will end up having the
+    longest codes).
+
+    \vspace{0.5em}
+    \newcommand{\huffmannode}[3][\qquote]{\small \begin{minipage}{3em}\begin{center}#1{\texttt{#2}}\\\vspace{0.2em}\hrule\vspace{0.2em}\emph{freq: }#3\end{center}\end{minipage}}
+
+    \newcommand{\huffmantree}[2][4em]{
+        \begin{minipage}{#1}
+            \vspace*{0.5em}
+            \binarytree{#2}
+
+            \vspace*{0.5em}
+        \end{minipage}
+    }
+
+    We begin by creating a node for each letter in our text:
+
+    \begin{center}
+    \scalebox{0.6}{\begin{tabular}{c|c|c|c|c|c}\cline{2-5}
+        pq $\longleftarrow$ &
+        \huffmantree{"\huffmannode{c}{1}"}&
+        \huffmantree{"\huffmannode{ }{2}"}&
+        \huffmantree{"\huffmannode{a}{4}"}&
+        \huffmantree{"\huffmannode{b}{5}"}&
+        $\longleftarrow$ \\\cline{2-5}
+    \end{tabular}}
+    \end{center}
+
+    \subquestion*{Step 3: Combine the Nodes Until Only One is Left}
+    Now that we have a priority queue of the nodes, we want to put them together into a
+    tree.  To do this, we repeatedly remove the smallest two (the ones at the front of the
+    priority queue) and create a new node with them as children. Note that the priority
+    queue is \emph{arbitrary} in how it breaks ties.
+
+    \vspace{0.5em}
+
+    \begin{minipage}{0.29\textwidth}
+    \examheader{(3a) Remove Two Smallest}
+    First, remove the smallest two nodes from the priority queue:\vspace{-1em}
+    \begin{center}
+    \scalebox{0.8}{
+    \hfill \huffmantree{"\huffmannode{c}{1}"} \hfill and \hfill \huffmantree{"\huffmannode{ }{2}"}\hfill
+    }
+
+    \vspace{0.5em}
+
+    \scalebox{0.6}{
+    \hspace*{-1.5em}\begin{tabular}{c|c|c|c}\cline{2-3}
+        pq $\longleftarrow$ &
+        \huffmantree{"\huffmannode{a}{4}"}&
+        \huffmantree{"\huffmannode{b}{5}"}&
+        $\longleftarrow$ \\\cline{2-3}
+    \end{tabular}}
+    \end{center}
+    \vspace{0.49em}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.30\textwidth}
+    \examheader{(3b) Combine Them Together}
+    {\small Then, create a new node. The frequency is the sum of two nodes:}\vspace{-1em}
+    \begin{center}
+    \hspace*{-2em}\scalebox{0.6}{
+    \huffmantree{"\huffmannode[]{\;}{3}" -> {"\huffmannode{c}{1}", "\huffmannode{ }{2}"}}
+    }
+
+    \hspace*{0em}\scalebox{0.6}{
+    \begin{tabular}{c|c|c|c}\cline{2-3}
+        pq $\longleftarrow$ &
+        \huffmantree{"\huffmannode{a}{4}"}&
+        \huffmantree{"\huffmannode{b}{5}"}&
+        $\longleftarrow$ \\\cline{2-3}
+    \end{tabular}}
+    \end{center}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.34\textwidth}
+    \examheader{(3c) Add Back To Priority Queue}
+    Now that we have a ``new node'', add it back to the priority queue:
+    \begin{center}
+    \scalebox{0.52}{
+    \begin{tabular}{c|c|c|c|c}\cline{2-4}
+        pq $\longleftarrow$ &
+        \huffmantree[10em]{"\huffmannode[]{\;}{3}" -> {"\huffmannode{c}{1}", "\huffmannode{ }{2}"}}&
+        \huffmantree{"\huffmannode{a}{4}"}&
+        \huffmantree{"\huffmannode{b}{5}"}&
+        $\longleftarrow$ \\\cline{2-4}
+    \end{tabular}}
+    \end{center}
+    \vspace{0.9em}
+    \end{minipage}
+
+    \vspace{1.0em}
+
+    \centering We repeat this process until there is only one node left in the priority
+    queue.
+
+    \justifying\noindent
+    Here are the remaining steps (each time, we remove the two smallest frequencies, combine
+    them, and put the result back):
+
+    \hspace*{-2.5em}\scalebox{0.52}{
+    \begin{tabular}{c|c|c|c|c}\cline{2-4}
+        pq $\longleftarrow$ &
+        \huffmantree[10em]{"\huffmannode[]{\;}{3}" -> {"\huffmannode{c}{1}", "\huffmannode{ }{2}"}}&
+        \huffmantree{"\huffmannode{a}{4}"}&
+        \huffmantree{"\huffmannode{b}{5}"}&
+        $\longleftarrow$ \\\cline{2-4}
+    \end{tabular}}
+    {\scriptsize then,}
+    \scalebox{0.52}{
+    \begin{tabular}{c|c|c|c}\cline{2-3}
+        pq $\longleftarrow$ &
+        \huffmantree{"\huffmannode{b}{5}"}&
+        \huffmantree[13em]{"\huffmannode[]{\;}{7}" -> {
+        {"\huffmannode[]{\;}{3}" -> {"\huffmannode{c}{1}", "\huffmannode{ }{2}"}},
+        "\huffmannode{a}{4}"}}&
+        $\longleftarrow$ \\\cline{2-3}
+    \end{tabular}}
+    {\scriptsize then,}
+    \scalebox{0.52}{
+    \begin{tabular}{c|c|c}\cline{2-2}
+        pq $\longleftarrow$ &
+        \huffmantree[14em]{
+            "\huffmannode[]{\;}{12}" -> {
+        "\huffmannode{b}{5}",
+        {"\huffmannode[]{\;}{7}" -> {
+        {"\huffmannode[]{\;}{3}" -> {"\huffmannode{c}{1}", "\huffmannode{ }{2}"}},
+        "\huffmannode{a}{4}"}}}
+        }&
+        $\longleftarrow$ \\\cline{2-2}
+    \end{tabular}}
+
+    \vspace{1em}
+
+    \noindent Now that we only have one node left, we can use the tree we constructed to
+    create the huffman codes!
+
+    \subquestion*{Step 4: Read Off The Huffman Codes}
+    \noindent At this point, the frequencies of the letters have already been taken into
+    account; so, we no longer even look at them.  Thus, the tree we've constructed looks
+    like the following:
+
+\vspace{1em}
+
+\hspace*{5em}
+\begin{minipage}{0.3\textwidth}
+    \scalebox{0.8}{\binarytree[font=\normalsize][4]{
+        r1/"" ->[edge label=0, swap] "\qquote{b}",
+        r1/"" ->[edge label=1] {
+            r2/"" ->[edge label=0, swap] {
+                r3/"" ->[edge label=0, swap] "\qquote{c}",
+                r3/"" ->[edge label=1] "\qquote{ }"
+            },
+            r2/"" ->[edge label=1] "\qquote{a}"
+        }
+    }}
+\end{minipage}
+\hfill
+\begin{minipage}{0.3\textwidth}
+\renewcommand{\FancyVerbFormatLine}[1]{#1}
+\begin{Verbatim}[fontsize=\small,frame=single,label=simple-spec-example.code]
+98
+0
+99
+100
+32
+101
+97
+11
+\end{Verbatim}
+\end{minipage}
+\hspace*{5em}
+
+\vspace{1em}
+
+    \noindent To figure out the huffman code for a letter, we traverse the tree from the
+    root to the node with the letter in it.  When we go left,  we print a 0 and if we go
+    right, we print a 1.  For example, \qquote{c} would be \texttt{100}, because we
+    go right, then left, then left to reach it.
+
+    \vspace{0.5em}
+
+    \noindent Just like in 20 questions, we will output the tree in ``standard format''.
+    Notice that the only actual information is in the leaves of the tree.  So, the
+    \texttt{code} file, which you can get by asking the main to ``make a code'', will
+    consist of line pairs: the first line will be the ASCII value of the character in the
+    leaf and the second line will be the huffman code for that character.  For example,
+    the output of the tree we just constructed would look like the above.  The leaves should
+    appear in traversal order.
+\end{question}
+
+\begin{question}{Huffman Compression and Decompression}
+Now that we know how to construct a huffman code, we are ready to understand the huffman
+compression and decompression algorithms.  Here is an overview of how they work:
+
+\tikzset{proc/.style={
+    rectangle,
+    rounded corners,
+    draw=black,
+    very thick,
+    align=center,
+    minimum height=1.5em,
+    minimum width=8em,
+    text width=7em
+}}
+
+\vspace{0.1em}
+
+\begin{minipage}{0.3\textwidth}
+\scalebox{0.62}{
+\binarytree[font=\normalsize][5]{
+        inp/"Input File (\texttt{file.txt})"[proc] ->[edge label=You do this, swap]
+            code/"Huffman Code (\texttt{file.code})"[proc],
+        code -> comp/"Compressed File (\texttt{file.short})"[proc, below left=5em and 5em of code],
+        inp ->[edge label=\begin{minipage}{0.9\textwidth}\texttt{HuffmanCompressor}\\handles this\end{minipage}]
+            comp/"Compressed File (\texttt{file.short})"[proc],
+        comp ->[edge label=You do this] "Decompressed File (\texttt{file.new})"[proc, below left=8em and 5em of comp],
+        code -> "Decompressed File (\texttt{file.new})"[proc]
+}}
+\end{minipage}
+\hfill
+\begin{minipage}{0.65\textwidth}
+\examheader{Compression Algorithm}\vspace{0.5em}
+{\small \begin{enumerate}[(1)]\setlength{\itemindent}{-1em}
+    \item \texttt{HuffmanCompressor} generates the frequencies in a given file.
+    \item \texttt{HuffmanCode} creates the huffman code from the frequencies.
+    \item \texttt{HuffmanCode} writes out the huffman codes to a \texttt{.code} file.
+    \item \texttt{HuffmanCompressor} writes a \texttt{.short} file.
+\end{enumerate}}
+
+\examheader{Decompression Algorithm}\vspace{0.5em}
+{\small \begin{enumerate}[(1)]\setlength{\itemindent}{-1em}
+    \item \texttt{HuffmanCode} reads in a \texttt{.code} file in standard format.
+    \item \texttt{HuffmanCode} writes out a \texttt{.new} file.
+\end{enumerate}}
+
+\end{minipage}
+
+
+
+\end{question}
+\newpage
+
+\begin{question}{\texttt{HuffmanNode}}
+    The contents of the \texttt{HuffmanNode} class are up to you. Though we have studied
+    trees of \texttt{int}s, you \emph{should} create nodes specific to solving this problem.
+    Your \texttt{HuffmanNode} class must be a private static inner class within \texttt{HuffmanCode},
+    and should have at least one constructor used by your tree.
+    Your node's fields \emph{must} be public. \texttt{HuffmanNode} should not contain \emph{any actual huffman coding logic}.
+    It should only represent a single node of the tree.
+\end{question}
+
+\begin{question}{\texttt{HuffmanCode}}
+    This class represents a huffman code for a particular message. It keeps track of a
+    binary tree constructed using the huffman algorithm.
+\vspace{1em}
+
+\subquestion*{\texttt{HuffmanCode} should have the following constructors:}
+\begin{method}{public}{HuffmanCode}{int[] frequencies}
+    This constructor should initialize a new \texttt{HuffmanCode} object using the algorithm
+    described for making a code from an array of frequencies.  \texttt{frequencies} is an
+    array of frequencies where \texttt{frequences[i]} is the count of the character with
+    ASCII value \texttt{i}. Make sure to use a \texttt{PriorityQueue} to build the huffman
+    code.
+\end{method}
+
+\begin{method}{public}{HuffmanCode}{Scanner input}
+    This constructor should initialize a new \texttt{HuffmanCode} object by reading in a
+    previously constructed code from a \texttt{.code} file. You may assume the
+    \texttt{Scanner} is not \texttt{null} and is always contains data encoded in legal,
+    valid standard format.
+\end{method}
+
+\subquestion*{\texttt{HuffmanCode} should also implement the following methods:}
+\begin{method}{public void}{save}{PrintStream output}
+    This method should store the current huffman codes to the given output stream in the
+    standard format described above.
+\end{method}
+
+\begin{method}{public void}{translate}{BitInputStream input, PrintStream output}
+    This method should read individual bits from the input stream and write the
+    corresponding characters to the output. It should stop reading when the
+    \texttt{BitInputStream} is empty. You may assume that the input stream contains a legal
+    encoding of characters for this tree's huffman code.  \textbf{See below for the methods
+    that a \texttt{BitInputStream} has.}
+\end{method}
+\end{question}
+
+\vspace{-0.5em}
+
+\begin{question}{\texttt{BitInputStream}}
+The provided \texttt{BitInputStream} class reads data bit by bit.  This will be useful for
+the \texttt{translate} method in \texttt{HuffmanCode}.  \texttt{BitInputStream} has the
+following methods:
+
+\begin{method}{public int}{nextBit}{}
+    This method returns the next bit in the input stream.  If there is no such bit, then it
+    throws a \texttt{NoSuchElementException}.
+\end{method}
+
+\begin{method}{public boolean}{hasNextBit}{}
+    This method returns true if the input stream has at least one more bit and false
+    otherwise.
+\end{method}
+
+The interface for \texttt{BitInputStream} looks very much like a \texttt{Scanner}, and it
+should be used similiarly.
+\end{question}
+
+\begin{question}{Implementation Details}
+Your program should exactly reproduce the format and general behavior demonstrated on the
+output comparison tool. Note that this assignment has two mostly separate parts: creating a
+huffman code and decompressing a message using your huffman code.  Of the four methods to
+implement, two are relevant to each part.
+
+\vspace{0.5em}
+
+\subquestion*{Creating A Huffman Code}
+You will write methods to (1) create a huffman code from an array of frequencies and (2)
+write out the code you've created in standard format.
+
+\subsubquestion*{Frequency Array Constructor}
+You should use the algorithm described in the ``Making a Huffman Code'' section to implement
+this constructor.  You will need to use \texttt{PriorityQueue<E>} in the \texttt{java.util}
+package.
+
+\vspace{0.5em}
+
+The only difference between a priority queue and a standard queue is that it uses the
+natural ordering of the objects to decide which object to dequeue first, with objects
+considered ``less'' returned first.  You will be putting subtrees into your priority queue,
+which means you'll be adding values of type \texttt{HuffmanNode}.
+
+\vspace{0.5em}
+
+This means that your \texttt{HuffmanNode} class will have to implement the
+\texttt{Comparable<E>} interface.  It should use the frequency of the subtree to determine
+its ordering relative to other subtrees, with lower frequencies considered ``less'' than
+higher frequencies.  If two frequencies are equal, the nodes are too.
+
+\vspace{0.5em}
+
+Remember that, in order to make our code more flexible we should be declaring variables with
+their interface types when possible. This means you should define your \texttt{PriorityQueue} variables with
+the \texttt{Queue} interface.
+
+\vspace{0.5em}
+
+The Huffman solution is not unique.  You can obtain any one of several different equivalent
+trees depending upon how certain decisions are made.  If you implement it as we have
+specified, then you should get exactly the same tree for any particular implementation
+of \texttt{PriorityQueue}.  Make sure that you use the built-in \texttt{PriorityQueue} class
+and that when you are combining pairs of values taken from the priority queue, you make the
+first value removed from the queue the left subtree and you make the second value removed
+the right subtree.
+
+\subquestion*{Decompressing A Message}
+You will write methods to (1) read in a \texttt{.code} file created with \texttt{save()} and
+(2) translate a compressed file back into a decompressed file.
+
+\subsubquestion*{{\tt Scanner} Constructor}
+This constructor will be given a \texttt{Scanner} that contains data produced by
+\texttt{save()}.  In other words, the input for this constructor is the output you produced
+into a \texttt{.code} file.  The goal of this constructor is to re-create the huffman tree
+from your output.  Note that the frequencies are irrelevant for this part, because the tree
+has already been constructed; so, you should set all the frequencies to some standard value
+(such as 0 or -1) when creating \texttt{HuffmanNode}s in this constructor.
+\dangerbendy{See lecture slides for example of this algorithm}
+
+\vspace{0.5em}
+
+Remember that the standard code file format is a series of pairs of lines where the first
+line has an integer representing the character's ASCII value and the second line has the
+code to use for that character. You might be tempted to call \texttt{nextInt()} to read the
+integer and \texttt{nextLine()} to read the code, but remember that mixing token-based
+reading and line-based reading is not simple. Here is an alternative that uses a method
+called \texttt{parseInt} in the \texttt{Integer} class that allows you to use two successive
+calls on \texttt{nextLine()}:
+\begin{lstlisting}
+int asciiValue = Integer.parseInt(input.nextLine());
+String code = input.nextLine();
+\end{lstlisting}
+
+
+\subsubquestion*{\tt translate}
+This method takes in a \texttt{BitInputStream} representing a previously compressed message
+and outputs the original decompressed message. \texttt{BitInputStream} can be used in a very
+similar way to a \texttt{Scanner}; see the description of its methods on page 4.
+
+This method reads sequences of bits that represent encoded characters to figure out what the
+original characters must have been.  The algorithm works as follows:
+\begin{itemize}
+    \item Begin at the top of the tree
+    \item For each bit read in from the \texttt{BitInputStream}, if it's a 0, go left, and
+        if it's a 1, go right.
+    \item Eventually, we will hit a leaf node.  Once we do, write out the integer code for
+        that character to the output using the following \texttt{PrintStream} method:
+\begin{center}
+\verb+public void write(int b)+
+\end{center}
+    \item Then, go back to the top of the tree, and do the process over again.
+        \dangerbendy{Do not use \texttt{print} instead of \texttt{write}!}
+\end{itemize}
+
+You will have to be careful if you use recursion in your decode method.  Java has a limit on
+the stack depth you can use.  For a large message, there are hundreds of thousands of
+characters to decode.  It would not be appropriate to write code that requires a stack that
+is hundreds of thousands of levels deep.  You might be forced to write some or all of this
+using loops to make sure that you don't exceed the stack depth.
+\end{question}
+
+\begin{question}{Translate Example}
+Suppose we have the following \texttt{.code} and \texttt{.short} files:\\
+
+\hspace*{3em}
+\begin{minipage}{0.4\textwidth}
+\scalebox{0.8}{\binarytree[font=\normalsize][4]{
+    r1/"" ->[edge label=0, swap] "\qquote{b}",
+    r1/"" ->[edge label=1] {
+        r2/"" ->[edge label=0, swap] {
+            r3/"" ->[edge label=0, swap] "\qquote{c}",
+            r3/"" ->[edge label=1] "\qquote{ }"
+        },
+        r2/"" ->[edge label=1] "\qquote{a}"
+    }
+}}
+\end{minipage}
+\hfill
+\begin{minipage}{0.5\textwidth}
+\renewcommand{\FancyVerbFormatLine}[1]{#1}
+\begin{Verbatim}[fontsize=\small,frame=single,label=simple-spec-example.short]
+1101110111010110011000
+\end{Verbatim}
+\end{minipage}\hspace*{3em}
+
+\vspace{1em}
+
+Read \texttt{1}, go right. Read \texttt{1}, go right. \qquote{a} is a leaf.  Output \qquote{a}.
+\hfill (Input: \texttt{\underline{11}0101110101100})
+
+Read \texttt{0}, go left.  \qquote{b} is a leaf.  Output \qquote{b}.
+\hfill (Input: \texttt{11\underline{0}101110101100})
+
+Read \texttt{1}, go right.  Read \texttt{0}, go left.  Read \texttt{1}, go right.  \qquote{ } is a leaf.  Output \qquote{ }.
+\hfill (Input: \texttt{110\underline{101}110101100})
+
+Read \texttt{1}, go right. Read \texttt{1}, go right. \qquote{a} is a leaf.  Output \qquote{a}.
+\hfill (Input: \texttt{110101\underline{11}0101100})
+
+Read \texttt{0}, go left.  \qquote{b} is a leaf.  Output \qquote{b}.
+\hfill (Input: \texttt{11010111\underline{0}101100})
+
+Read \texttt{1}, go right.  Read \texttt{0}, go left.  Read \texttt{1}, go right.  \qquote{ } is a leaf.  Output \qquote{ }.
+\hfill (Input: \texttt{110101110\underline{101}100})
+
+Read \texttt{1}, go right.  Read \texttt{0}, go left.  Read \texttt{0}, go right.  \qquote{c} is a leaf.  Output \qquote{c}.
+\hfill (Input: \texttt{110101110101\underline{100}})
+
+\vspace{1em}
+
+So, the decompressed text is ``\texttt{ab ab c}''.
+
+\end{question}
+
+\begin{question}{Creative Aspect (\texttt{secretmessage.short} and \texttt{secretmessage.code})}
+Along with your program you should turn in files named \texttt{secretmessage.short} and
+\texttt{secretmessage.code} that represent a ``secret'' compressed message from you to your
+TA and its code file. The message can be anything you want, as long as it is not offensive.
+Your TA will decompress your message with your tree and read it while grading.
+\end{question}
+
+
+\newpage
+
+\begin{question}{Style Guidelines and Grading}
+Part of your grade will come from appropriately utilizing binary trees and recursion to
+implement HuffmanCode as described previously.  We will also grade on the elegance of your
+recursive algorithm; don't create special cases in your recursive code if they are
+unnecessary.
+
+\vspace{0.5em}
+
+\subquestion*{\texttt{x = change(x)}}
+An important concept introduced in lecture was called \texttt{x = change(x)}. This idea is
+related to proper design of recursive methods that manipulate the structure of a binary
+tree in order to reduce redundancy for cases dealing with left/right. You should use the
+\texttt{x = change(x)} pattern where appropriate to remove such redundancy.
+
+\subquestion*{Avoid Redundancy}
+Create ``helper'' method(s) to capture repeated code.  As long as all extra methods you
+create are \texttt{private} (so outside code cannot call them), you can  have additional
+methods in your class beyond those specified here.  If you find that multiple methods in
+your class do similar things, you should create helper method(s) to capture the common code.
+
+\subquestion*{Data Fields}
+Properly encapsulate your objects by making your fields \texttt{private}. (You can and
+\emph{should} make fields in \texttt{HuffmanNode} public.) Avoid unnecessary fields;
+use fields to store important data of your object but not temporary data used in only one
+place. Always initialize fields in a constructor or method, never at declaration.
+
+\subquestion*{Java Style Guidelines}
+Appropriately use control structures like loops and if/else statements.  Avoid redundancy
+using techniques such as methods, loops, and factoring common code out of if/else
+statements. Properly use indentation, good variable names, and types. Do not have any lines
+of code longer than 100 characters. Please refer to the \href{https://courses.cs.washington.edu/courses/cse143/19wi/homework/cse143-style-guide2/javaguide.html}{Style Guide}
+and the \href{https://courses.cs.washington.edu/courses/cse143/19wi/style.shtml}{General Style Deductions} for a more complete list.
+
+\end{question}
+\end{document}
